@@ -143,6 +143,7 @@ def main():
             #     "names": ["done"]
             # },
             "next.reward": {"dtype": "float32", "shape": (1,), "names": ["done"]},
+            # "next.done": {"dtype": "bool", "shape": (1,), "names": None},
         },
         image_writer_threads=10,
         image_writer_processes=5,
@@ -195,9 +196,9 @@ def main():
 
                         # fake
                         reward = (
-                            np.float32(1.0)
+                            np.array([1.0], dtype=np.float32)
                             if index > 0.8 * len(data)
-                            else np.float32(0.0)
+                            else np.array([0.0], dtype=np.float32)
                         )
 
                         dataset.add_frame(

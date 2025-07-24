@@ -318,13 +318,13 @@ def add_actor_information_and_train(
     batch_size = cfg.batch_size
     offline_replay_buffer = None
 
-    # if cfg.dataset is not None:
-    #     offline_replay_buffer = initialize_offline_replay_buffer(
-    #         cfg=cfg,
-    #         device=device,
-    #         storage_device=storage_device,
-    #     )
-    #     batch_size: int = batch_size // 2  # We will sample from both replay buffer
+    if cfg.dataset is not None:
+        offline_replay_buffer = initialize_offline_replay_buffer(
+            cfg=cfg,
+            device=device,
+            storage_device=storage_device,
+        )
+        batch_size: int = batch_size // 2  # We will sample from both replay buffer
 
     logging.info("Starting learner thread")
     interaction_message = None
@@ -925,7 +925,7 @@ def initialize_replay_buffer(
     Returns:
         ReplayBuffer: Initialized replay buffer
     """
-    # debug
+    # TODO use this
     # if not cfg.resume:
     #     return ReplayBuffer(
     #         capacity=cfg.policy.online_buffer_capacity,
@@ -942,6 +942,8 @@ def initialize_replay_buffer(
     repo_id = None
     # if cfg.dataset is not None:
     #     repo_id = cfg.dataset.repo_id
+
+    # NOTE for debug
     dataset = LeRobotDataset(
         repo_id="/liujinxin/mjf/lerobot/data/ur",
     )
@@ -970,16 +972,13 @@ def initialize_offline_replay_buffer(
     Returns:
         ReplayBuffer: Initialized offline replay buffer
     """
-    if not cfg.resume:
-        logging.info("make_dataset offline buffer")
-        offline_dataset = make_dataset(cfg)
-    else:
-        logging.info("load offline dataset")
-        dataset_offline_path = os.path.join(cfg.output_dir, "dataset_offline")
-        offline_dataset = LeRobotDataset(
-            repo_id=cfg.dataset.repo_id,
-            root=dataset_offline_path,
-        )
+    # if not cfg.resume:
+    #     logging.info("make_dataset offline buffer")
+    #     offline_dataset = make_dataset(cfg)
+    # else:
+    logging.info("load offline dataset")
+    # dataset_offline_path = os.path.join(cfg.output_dir, "dataset_offline")
+    offline_dataset = LeRobotDataset(repo_id="/liujinxin/mjf/lerobot/data/ur")
 
     logging.info("Convert to a offline replay buffer")
     offline_replay_buffer = ReplayBuffer.from_lerobot_dataset(
