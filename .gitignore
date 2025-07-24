@@ -89,8 +89,6 @@ celerybeat-schedule
 celerybeat.pid
 
 ### IDE & Editor Config ###
-# VS Code
-.vscode/
 .devcontainer/
 
 # JetBrains / PyCharm

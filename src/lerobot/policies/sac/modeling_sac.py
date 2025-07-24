@@ -980,6 +980,7 @@ class PretrainedImageEncoder(nn.Module):
         """Set up CNN encoder"""
         from transformers import AutoModel
 
+        # cp -r /liujinxin/model/models--helper2424--resnet10 ~/.cache/huggingface/hub/
         self.image_enc_layers = AutoModel.from_pretrained(config.vision_encoder_name, trust_remote_code=True)
 
         if hasattr(self.image_enc_layers.config, "hidden_sizes"):

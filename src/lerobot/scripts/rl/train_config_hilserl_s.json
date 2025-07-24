@@ -29,7 +29,7 @@
             "ACTION": "MIN_MAX"
         },
         "input_features": {
-            "observation.images.side": {
+            "observation.image.scene_image": {
                 "type": "VISUAL",
                 "shape": [
                     3,
@@ -37,7 +37,7 @@
                     128
                 ]
             },
-            "observation.images.front": {
+            "observation.image.wrist_image": {
                 "type": "VISUAL",
                 "shape": [
                     3,
@@ -48,14 +48,14 @@
             "observation.state": {
                 "type": "STATE",
                 "shape": [
-                    15
+                    8
                 ]
             }
         },
-        "device": "mps",
+        "device": "cuda",
         "use_amp": false,
         "dataset_stats": {
-            "observation.images.side": {
+            "observation.image.scene_image": {
                 "mean": [
                     0.485,
                     0.456,
@@ -67,7 +67,7 @@
                     0.225
                 ]
             },
-            "observation.images.front": {
+            "observation.image.wrist_image": {
                 "mean": [
                     0.485,
                     0.456,
@@ -81,67 +81,51 @@
             },
             "observation.state": {
                 "min": [
-                    -15.0,
-                    -20.0,
-                    10.0,
-                    65.0,
-                    0.0,
-                    0.0,
-                    -40.0,
-                    -60.0,
-                    -50.0,
-                    -80.0,
-                    -10.0,
-                    -110.0,
-                    -15.0,
-                    -20.0,
-                    15.0,
-                    70.0,
-                    -5.0,
-                    0.0,
-                    0.26,
-                    -0.06,
-                    0.25
+                    -1.0,
+                    -1.0,
+                    -1.0,
+                    -1.0,
+                    -1.0,
+                    -1.0,
+                    -1.0,
+                    -1.0
                 ],
                 "max": [
-                    15.0,
-                    15.0,
-                    40.0,
-                    110.0,
-                    0.5,
-                    31.0,
-                    53.0,
-                    61.0,
-                    67.0,
-                    90.0,
-                    6.0,
-                    100.0,
-                    15.0,
-                    12.0,
-                    40.0,
-                    110.0,
-                    0.5,
-                    31.0,
-                    0.32,
-                    0.06,
-                    0.35
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0
                 ]
             },
             "action": {
                 "min": [
-                    -0.03,
-                    -0.03,
-                    -0.03
+                    -1.0,
+                    -1.0,
+                    -1.0,
+                    -1.0,
+                    -1.0,
+                    -1.0,
+                    -1.0,
+                    -1.0
                 ],
                 "max": [
-                    0.03,
-                    0.03,
-                    0.03
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0
                 ]
             }
         },
         "num_discrete_actions": 3,
-        "storage_device": "mps",
+        "storage_device": "cuda",
         "vision_encoder_name": "helper2424/resnet10",
         "freeze_vision_encoder": true,
         "image_encoder_hidden_dim": 32,
@@ -200,7 +184,6 @@
     },
     "env": {
         "type": "gym_manipulator",
-
         "wrapper": {
             "display_cameras": false,
             "add_joint_velocity_to_observation": true,
@@ -248,7 +231,7 @@
         "num_episodes": 0,
         "episode": 0,
         "pretrained_policy_name_or_path": null,
-        "device": "mps",
+        "device": "cuda",
         "push_to_hub": true,
         "fps": 10,
         "features": {
@@ -271,19 +254,19 @@
             "observation.state": {
                 "type": "STATE",
                 "shape": [
-                    15
+                    8
                 ]
             },
             "action": {
                 "type": "ACTION",
                 "shape": [
-                    3
+                    8
                 ]
             }
         },
         "features_map": {
-            "observation.images.front": "observation.images.side",
-            "observation.images.wrist": "observation.images.wrist",
+            "observation.images.front": "observation.image.scene_image",
+            "observation.images.wrist": "observation.image.wrist_image",
             "observation.state": "observation.state",
             "action": "action"
         }

@@ -925,25 +925,25 @@ def initialize_replay_buffer(
     Returns:
         ReplayBuffer: Initialized replay buffer
     """
-    if not cfg.resume:
-        return ReplayBuffer(
-            capacity=cfg.policy.online_buffer_capacity,
-            device=device,
-            state_keys=cfg.policy.input_features.keys(),
-            storage_device=storage_device,
-            optimize_memory=True,
-        )
+    # debug
+    # if not cfg.resume:
+    #     return ReplayBuffer(
+    #         capacity=cfg.policy.online_buffer_capacity,
+    #         device=device,
+    #         state_keys=cfg.policy.input_features.keys(),
+    #         storage_device=storage_device,
+    #         optimize_memory=True,
+    #     )
 
     logging.info("Resume training load the online dataset")
-    dataset_path = os.path.join(cfg.output_dir, "dataset")
+    # dataset_path = os.path.join(cfg.output_dir, "dataset")
 
     # NOTE: In RL is possible to not have a dataset.
     repo_id = None
-    if cfg.dataset is not None:
-        repo_id = cfg.dataset.repo_id
+    # if cfg.dataset is not None:
+    #     repo_id = cfg.dataset.repo_id
     dataset = LeRobotDataset(
-        repo_id=repo_id,
-        root=dataset_path,
+        repo_id="/liujinxin/mjf/lerobot/data/ur",
     )
     return ReplayBuffer.from_lerobot_dataset(
         lerobot_dataset=dataset,

@@ -1,0 +1,29 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python Debugger: Current File with Arguments",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "args": "${command:pickArgs}"
+        },
+        // python -m lerobot.scripts.rl.learner_s --config_path /Users/majianfei/Projects/Github/ML/lerobot/src/lerobot/scripts/rl/train_config_hilserl_s.json
+        // export KMP_DUPLICATE_LIB_OK=TRUE
+        {
+            "name": "Python Debugger: learner_s",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "lerobot.scripts.rl.learner_s",
+            "console": "integratedTerminal",
+            "args": [
+                "--config_path",
+                "/liujinxin/mjf/lerobot/src/lerobot/scripts/rl/train_config_hilserl_s.json"
+            ]
+        }
+    ]
+}
