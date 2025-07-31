@@ -171,3 +171,6 @@ outputs/
 
 # Dev folders
 .cache/*
+
+dataset
+models
