@@ -8,11 +8,13 @@
     "steps": 100000,
     "log_freq": 1,
     "save_checkpoint": true,
-    "save_freq": 100,
+    "save_freq": 50,
     "wandb": {
         "enable": true,
         "project": "ur",
-        "disable_artifact": true
+        "disable_artifact": true,
+        "key": "f3ff179b6f827f5e96753a72451d069bd58bd413",
+        "mode": "offline"
     },
     "dataset": {
         "repo_id": "ur_0820",
@@ -166,7 +168,7 @@
         "target_entropy": null,
         "use_backup_entropy": true,
         "grad_clip_norm": 10.0,
-        "num_discrete_actions": 3,
+        "num_discrete_actions": 2,
         "critic_network_kwargs": {
             "hidden_dims": [
                 256,
@@ -190,7 +192,7 @@
         },
         "actor_learner_config": {
             "learner_host": "0.0.0.0",
-            "learner_port": 39335,
+            "learner_port": 9002,
             "policy_parameters_push_frequency": 4
         },
         "concurrency": {
