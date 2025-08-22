@@ -35,6 +35,9 @@ Example:
     action = policy.select_action(obs)
     obs, reward, terminated, truncated, info = env.step(action)
 """
+import os 
+import sys
+sys.path.append(os.getcwd())
 
 import logging
 import time
@@ -48,7 +51,7 @@ import numpy as np
 import torch
 import torchvision.transforms.functional as F  # noqa: N812
 
-from lerobot.cameras import opencv  # noqa: F401
+# from lerobot.cameras import opencv  # noqa: F401
 from lerobot.configs import parser
 from lerobot.envs.configs import EnvConfig
 from lerobot.envs.utils import preprocess_observation
@@ -68,6 +71,7 @@ from lerobot.teleoperators.gamepad.teleop_gamepad import GamepadTeleop
 from lerobot.teleoperators.keyboard.teleop_keyboard import KeyboardEndEffectorTeleop
 from lerobot.utils.robot_utils import busy_wait
 from lerobot.utils.utils import log_say
+from scipy.spatial.transform import Rotation as R
 
 logging.basicConfig(level=logging.INFO)
 
@@ -212,6 +216,365 @@ class TorchActionWrapper(gym.Wrapper):
             action = action.squeeze(0)
         action = action.detach().cpu().numpy()
         return self.env.step(action)
+
+class UrRobotEnv(gym.Env):
+    """
+    Gym-compatible environment for evaluating robotic control policies with integrated human intervention.
+
+    """
+
+    def __init__(
+        self,
+        use_gripper: bool = True,
+        display_cameras: bool = False,
+    ):
+        """
+        Initialize the RobotEnv environment.
+
+        The environment is set up with a robot interface, which is used to capture observations and send joint commands. The setup
+        supports both relative (delta) adjustments and absolute joint positions for controlling the robot.
+
+        Args:
+            use_gripper: Whether use grippper.
+            display_cameras: If True, the robot's camera feeds will be displayed during execution.
+        """
+        super().__init__()
+
+        import os
+        import sys
+
+        # TODO make the path become an argument
+        # path = "/home/robot/code/UR_Robot_Arm_Show/tele_ws/src/tele_ctrl_jeff/arch"
+        path = "/home/robot/code/debug2_UR_Robot_Arm_Show/workspace/src/robot/src/arch"
+        
+        target_path = os.path.abspath(
+            path
+        )
+        sys.path.append(target_path)
+
+        # 导入目标模块并调用函数
+        from online_env import OnlineEnv
+
+        self.UrRobot = OnlineEnv(host="localhost")
+        self.display_cameras = display_cameras
+
+        # Episode tracking.
+        self.current_step = 0
+        self.episode_data = None
+
+        # _robot_state == _joint_names. The order of names must be fixed.
+        self._robot_state = ["joint", "position"]
+        # self._image_keys from robot cameras originally
+        self._image_keys = ["scene", "wrist", "rgb"]
+        self._image_keys_mapping = {"scene": "scene_image", "wrist": "wrist_image", "rgb": "rgb_image"}
+        # reward key name
+        self._reward_key = "reward"
+
+        self.current_observation = None
+
+        self.use_gripper = use_gripper
+
+        # self.sample_action()
+
+        self._setup_spaces()
+
+    def _process_observation(self, obs_dict) -> dict[str, np.ndarray]:
+        """
+        This function is equals to _get_observation actually.
+        Helper to convert a dictionary from Robot to an ordered numpy array.
+        """
+        robot_states = np.concatenate(
+            [np.array(obs_dict["obs"]["robot_state"][name]).flatten() for name in self._robot_state]
+        )
+        # TODO adaptive key by feeding an argument from config.
+        images = {
+            self._image_keys_mapping[key]: obs_dict["obs"][key] for key in self._image_keys
+        }
+        self.current_observation = {"agent_pos": robot_states, "pixels": images}
+        self.reward = obs_dict["obs"]["reward"]
+
+    def _setup_spaces(self):
+        """
+        Dynamically configure the observation and action spaces based on the robot's capabilities.
+
+        Observation Space:
+            - For keys with "image": A Box space with pixel values ranging from 0 to 255.
+            - For non-image keys: A nested Dict space is created under 'observation.state' with a suitable range.
+
+        Action Space:
+            - The action space is defined as a Box space representing joint position commands. It is defined as relative (delta)
+              or absolute, based on the configuration.
+        """
+        response = self.UrRobot.get_observation()
+        while response["obs"]["robot_state"]["position"] is None:
+            response = self.UrRobot.get_observation()
+        self._process_observation(response)
+        # Define observation spaces for images and other states.
+        image_prefix = "observation.image"
+        observation_spaces = {
+            f"{image_prefix}.{key}": gym.spaces.Box(
+                low=0,
+                high=255,
+                shape=self.current_observation["pixels"][key].shape,
+                dtype=np.uint8,
+            )
+            for key in self.current_observation["pixels"]
+        }
+
+        observation_spaces["observation.state"] = gym.spaces.Box(
+            low=np.array([
+                    -0.458062951,
+                    -1.95279755,
+                    0.478171651,
+                    -2.60234227,
+                    -1.59640867,
+                    -1.17146093,
+                    -0.6040189744679158, 
+                    -0.6372649276666528, 
+                    0.09119244420442366, 
+                    0.23128056, 
+                    0.81082114, 
+                    -0.19445738, 
+                    -0.19476598
+                ]),
+            high=np.array([
+                    1.72904062,
+                    -0.21378954,
+                    2.75870306,
+                    -1.85731854,
+                    -1.57148821,
+                    1.02631867,
+                    -0.3742814180879835, 
+                    -0.14131461035390744, 
+                    0.17701562582993277, 
+                    0.58509052, 
+                    0.97288253, 
+                    0.1949256, 
+                    0.1946087               
+                ]),
+            shape=self.current_observation["agent_pos"].shape,
+            dtype=np.float32,
+        )
+
+        self.observation_space = gym.spaces.Dict(observation_spaces)
+
+        # Define the action space for joint positions along with setting an intervention flag.
+        action_dim = 7
+        bounds = {}
+        bounds["min"] = np.array([-0.6040189744679158, -0.6372649276666528, 0.09119244420442366, 0.23128056, 0.81082114, -0.19445738, -0.19476598])
+        bounds["max"] = np.array([-0.3742814180879835, -0.14131461035390744, 0.17701562582993277, 0.58509052, 0.97288253, 0.1949256, 0.1946087])
+
+        if self.use_gripper:
+            action_dim += 1
+            bounds["min"] = np.concatenate([bounds["min"], [0]])
+            bounds["max"] = np.concatenate([bounds["max"], [1]])
+
+        self.action_space = gym.spaces.Box(
+            low=bounds["min"], high=bounds["max"], shape=(action_dim,), dtype=np.float32
+        )
+
+    def _process_info(self, response: dict[str, Any]) -> dict[str, Any]:
+        info = {key: response[key] for key in response if key != "obs"}
+        info = {key: value for key, value in info.items() if value != {}}
+
+        if info["is_intervention"]:
+            action_intervention_info = info["action_intervention"]
+            action_intervention_info_state = (
+                np.array(action_intervention_info, dtype=np.float32)
+                if not isinstance(action_intervention_info, np.ndarray)
+                else action_intervention_info
+            )
+            action_np = action_intervention_info_state
+            if self.use_gripper:
+                action_intervention_info_gripper = (
+                    np.array(info["gripper"], dtype=np.float32)
+                    if not isinstance(info["gripper"], np.ndarray)
+                    else info["gripper"]
+                )
+                action_np = np.concatenate([action_np, [action_intervention_info_gripper]])
+            info["action_intervention"] = action_np
+        else:
+            info.pop("action_intervention", None)
+        
+        info["discrete_penalty"] = 0.0
+        
+        return info
+
+    def reset(
+        self, seed=None, options=None
+    ) -> tuple[dict[str, np.ndarray], dict[str, Any]]:
+        """
+        Reset the environment to its initial state.
+        This method resets the step counter and clears any episodic data.
+
+        Args:
+            seed: A seed for random number generation to ensure reproducibility.
+            options: Additional options to influence the reset behavior.
+
+        Returns:
+            A tuple containing:
+                - observation (dict): The initial sensor observation.
+                - info (dict): A dictionary with supplementary information, including the key "is_intervention".
+        """
+        super().reset(seed=seed, options=options)
+        response = self.UrRobot.reset()
+        info = self._process_info(response)
+
+        # Reset episode tracking variables.
+        self.current_step = 0
+        self.episode_data = None
+        self.current_observation = None
+        self._process_observation(response)
+        return self.current_observation, info
+
+    def step(
+        self, action
+    ) -> tuple[dict[str, np.ndarray], float, bool, bool, dict[str, Any]]:
+        """
+        obs.keys() -->
+            depth(no need)
+            rgb
+            scene
+            wrist
+            robot_state.keys() -->
+                position: ee's (x, y, z, rx, ry, rz)
+                joint: joints rotate angle except for gripper, 6 dof
+                gripper: 1.0/0.0
+
+        """
+        assert len(action) == 8, "The action should be [x, y, z, w, xi, yj, zk, gripper]."
+        response = self.UrRobot.step(action)
+        info = self._process_info(response)
+        self._process_observation(response)
+        self.UrRobot.response = None
+
+        if self.display_cameras:
+            self.render()
+
+        self.current_step += 1
+
+        reward = self.reward
+        terminated = False
+        truncated = False
+
+        return (
+            self.current_observation,
+            reward,
+            terminated,
+            truncated,
+            info,
+        )
+
+    def render(self):
+        """
+        Render the current state of the environment by displaying the robot's camera feeds.
+        """
+        import cv2
+
+        image_keys = [key for key in self.current_observation if "image" in key]
+
+        for key in image_keys:
+            cv2.imshow(
+                key,
+                cv2.cvtColor(self.current_observation[key].numpy(), cv2.COLOR_RGB2BGR),
+            )
+            cv2.waitKey(1)
+    def close(self):
+        """
+        Close the environment and clean up resources by disconnecting the robot.
+
+        If the robot is currently connected, this method properly terminates the connection to ensure that all
+        associated resources are released.
+        """
+        self.UrRobot.close()
+
+
+class SpaceMouseWrapper(gym.Wrapper):
+    def __init__(
+        self,
+        env,
+        use_gripper=True,
+    ):
+        super().__init__(env)
+
+        self.use_gripper = use_gripper
+
+    def get_teleop_commands(self, info):
+        intervention_is_active = info["is_intervention"]
+        episode_end_status = info["episode_end_status"]
+        terminate_episode = episode_end_status is not None
+        success = episode_end_status == "success"
+        rerecord_episode = episode_end_status == "rerecord_episode"
+        gamepad_action_np = info["action_intervention"]
+
+        return (
+            intervention_is_active,
+            gamepad_action_np,
+            terminate_episode,
+            success,
+            rerecord_episode,
+        )
+
+    def step(self, action):
+        """
+        Step the environment, using space mouse input to override actions when active.
+
+        Args:
+            action: Original action from agent.
+
+        Returns:
+            Tuple of (observation, reward, terminated, truncated, info).
+        """
+        # Step the environment
+        obs, reward, terminated, truncated, info = self.env.step(action)
+        if not info["is_intervention"]:
+            info.pop("episode_end_status", None)
+            return obs, reward, terminated, truncated, info
+
+        # Get gamepad state and action
+        (
+            is_intervention,
+            gamepad_action,
+            terminate_episode,
+            success,
+            rerecord_episode,
+        ) = self.get_teleop_commands(info)
+
+        # Update episode ending state if requested
+        if terminate_episode:
+            logging.info(f"Episode manually ended: {'SUCCESS' if success else 'FAILURE'}")
+
+        # Only override the action if gamepad is active
+        action = gamepad_action if is_intervention else action
+
+        # Add episode ending if requested via gamepad
+        terminated = truncated or terminate_episode
+
+        if success:
+            reward = 1.0
+            logging.info("Episode ended successfully with reward 1.0")
+        # else:
+        #     if reward == 1.0:
+        #         logging.info("The reward model failed to make a prediction !!!")
+        #     reward = 0.0
+
+        info["is_intervention"] = is_intervention
+        # For SpaceMouse, if intervention, `gamepad_action` is the intervention.
+        # If not intervention, policy's action is `action`.
+        # For consistency, let's store the *human's* action if intervention occurred.
+        info["action_intervention"] = action
+
+        info["rerecord_episode"] = rerecord_episode
+
+        # If episode ended, reset the state
+        if terminated or truncated:
+            # Add success/failure information to info dict
+            # This element will not be used in learner's training, only for statistics.
+            info["next.success"] = success
+        
+        info.pop("episode_end_status", None)
+
+        return obs, reward, terminated, truncated, info
 
 
 class RobotEnv(gym.Env):
@@ -526,6 +889,48 @@ class AddCurrentToObservation(gym.ObservationWrapper):
         )
         return observation
 
+
+class RewardProcessWrapper(gym.Wrapper):
+    def __init__(self, env, device="cuda"):
+        """
+        Wrapper to add reward prediction to the environment using reward which comes from hardware platform.
+
+        Args:
+            env: The environment to wrap.
+            device: The device to use for the classifier (default: "cuda").
+        """
+        self.env = env
+
+        self.device = device
+    
+    def step(self, action):
+        """
+        Execute a step and process reward which is from hardware platform.
+
+        Args:
+            action: The action to take in the environment.
+
+        Returns:
+            Tuple of (observation, reward, terminated, truncated, info).
+        """
+        observation, reward, terminated, truncated, info = self.env.step(action)
+        if reward == 1.0:
+            terminated = True
+        return observation, reward, terminated, truncated, info
+    
+    def reset(self, seed=None, options=None):
+        """
+        Reset the environment.
+
+        Args:
+            seed: Random seed for reproducibility.
+            options: Additional reset options.
+
+        Returns:
+            The initial observation and info from the wrapped environment.
+        """
+        return self.env.reset(seed=seed, options=options)
+    
 
 class RewardWrapper(gym.Wrapper):
     def __init__(self, env, reward_classifier, device="cuda"):
@@ -1866,6 +2271,23 @@ def make_robot_env(cfg: EnvConfig) -> gym.Env:
         env = BatchCompatibleWrapper(env=env)
         env = TorchActionWrapper(env=env, device=cfg.device)
         return env
+    
+    if cfg.type == "ur":
+         # Create base environment
+        env = UrRobotEnv(
+            use_gripper=cfg.wrapper.use_gripper,
+            display_cameras=cfg.wrapper.display_cameras if cfg.wrapper else False,
+        )
+        env = RewardProcessWrapper(env=env)
+        env = SpaceMouseWrapper(
+            env=env,
+            use_gripper=cfg.wrapper.use_gripper
+        )
+        env = ConvertToLeRobotObservation(env=env, device=cfg.device)
+        env = GymHilDeviceWrapper(env=env, device=cfg.device)
+        env = BatchCompatibleWrapper(env=env)
+        env = TorchActionWrapper(env=env, device=cfg.device)
+        return env
 
     if not hasattr(cfg, "robot") or not hasattr(cfg, "teleop"):
         raise ValueError(
@@ -2023,7 +2445,8 @@ def record_dataset(env, policy, cfg):
     from lerobot.datasets.lerobot_dataset import LeRobotDataset
 
     # Setup initial action (zero action if using teleop)
-    action = env.action_space.sample() * 0.0
+    action = env.action_space.sample()
+    print(f"action: {action}")
 
     action_names = ["delta_x_ee", "delta_y_ee", "delta_z_ee"]
     if cfg.wrapper.use_gripper:
@@ -2038,8 +2461,8 @@ def record_dataset(env, policy, cfg):
         },
         "action": {
             "dtype": "float32",
-            "shape": (len(action_names),),
-            "names": action_names,
+            "shape": (8,),
+            "names": None,
         },
         "next.reward": {"dtype": "float32", "shape": (1,), "names": None},
         "next.done": {"dtype": "bool", "shape": (1,), "names": None},
@@ -2247,6 +2670,11 @@ def main(cfg: EnvConfig):
 
         # Execute the step: wrap the NumPy action in a torch tensor.
         obs, reward, terminated, truncated, info = env.step(smoothed_action)
+        # logging.info(f"obs: {obs}")
+        # logging.info(f"reward: {reward}")
+        # logging.info(f"terminated: {terminated}")
+        # logging.info(f"truncated: {truncated}")
+        # logging.info(f"info: {info}")
         if terminated or truncated:
             successes.append(reward)
             env.reset()

@@ -46,6 +46,8 @@ For more details on the complete HILSerl training workflow, see:
 https://github.com/michel-aractingi/lerobot-hilserl-guide
 """
 
+import sys
+sys.path.append("/home/robot/.cache/huggingface/hub/models--helper2424--resnet10/snapshots/e16ff8c2c9fe2130c0e3eabfd142f131e59be97f")
 import logging
 import os
 import time
@@ -88,6 +90,7 @@ from lerobot.utils.utils import (
     get_safe_torch_device,
     init_logging,
 )
+import traceback
 
 ACTOR_SHUTDOWN_TIMEOUT = 30
 
@@ -276,6 +279,8 @@ def act_with_policy(
 
         if interaction_step >= cfg.policy.online_step_before_learning:
             # Time policy inference and check if it meets FPS requirement
+            if interaction_step == cfg.policy.online_step_before_learning:
+                input("Press enter to continue...")
             with policy_timer:
                 action = policy.select_action(batch=obs)
             policy_fps = policy_timer.fps_last
@@ -353,6 +358,7 @@ def act_with_policy(
             episode_intervention_steps = 0
             episode_total_steps = 0
             obs, info = online_env.reset()
+            print("!!!Reset environment, Start next step!!!")
 
         if cfg.env.fps is not None:
             dt_time = time.perf_counter() - start_time

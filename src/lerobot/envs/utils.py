@@ -38,8 +38,9 @@ def preprocess_observation(observations: dict[str, np.ndarray]) -> dict[str, Ten
     # map to expected inputs for the policy
     return_observations = {}
     if "pixels" in observations:
+        # You have to confirm your image_prefix.
         if isinstance(observations["pixels"], dict):
-            imgs = {f"observation.images.{key}": img for key, img in observations["pixels"].items()}
+            imgs = {f"observation.image.{key}": img for key, img in observations["pixels"].items()}
         else:
             imgs = {"observation.image": observations["pixels"]}
 

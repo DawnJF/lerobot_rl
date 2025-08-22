@@ -72,6 +72,7 @@ def receive_bytes_in_chunks(iterator, queue: Queue, shutdown_event: Event, log_p
 
     logging.info(f"{log_prefix} Starting receiver")
     for item in iterator:
+        # 每次收到数据项时表示开始记录,发生在处理传输状态之前.
         logging.debug(f"{log_prefix} Received item")
         if shutdown_event.is_set():
             logging.info(f"{log_prefix} Shutting down receiver")
@@ -79,20 +80,20 @@ def receive_bytes_in_chunks(iterator, queue: Queue, shutdown_event: Event, log_p
 
         if item.transfer_state == services_pb2.TransferState.TRANSFER_BEGIN:
             bytes_buffer.seek(0)
-            bytes_buffer.truncate(0)
-            bytes_buffer.write(item.data)
+            bytes_buffer.truncate(0)  # 清空缓冲区
+            bytes_buffer.write(item.data)  # 写入首批数据
             logging.debug(f"{log_prefix} Received data at step 0")
             step = 0
         elif item.transfer_state == services_pb2.TransferState.TRANSFER_MIDDLE:
-            bytes_buffer.write(item.data)
-            step += 1
+            bytes_buffer.write(item.data)  # 追加数据
+            step += 1  # 步数递增
             logging.debug(f"{log_prefix} Received data at step {step}")
         elif item.transfer_state == services_pb2.TransferState.TRANSFER_END:
-            bytes_buffer.write(item.data)
+            bytes_buffer.write(item.data)  # 写入最后的数据
             logging.debug(f"{log_prefix} Received data at step end size {bytes_buffer_size(bytes_buffer)}")
 
-            queue.put(bytes_buffer.getvalue())
-
+            queue.put(bytes_buffer.getvalue())  # 完整参数放入队列
+            # 重置缓冲区
             bytes_buffer.seek(0)
             bytes_buffer.truncate(0)
             step = 0

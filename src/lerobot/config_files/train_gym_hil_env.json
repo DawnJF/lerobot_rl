@@ -15,13 +15,13 @@
         "disable_artifact": true
     },
     "dataset": {
-        "repo_id": "/liujinxin/zbh/lerobot_rl/dataset/franka_sim_pick_lift_6",
+        "repo_id": "/home/robot/code/lerobot_rl/dataset/franka_sim_pick_lift_6",
         "use_imagenet_stats": false
     },
     "policy": {
         "type": "sac",
         "n_obs_steps": 1,
-        "repo_id": "/liujinxin/zbh/lerobot_rl/models/sac_gym_hil_pick_lift",
+        "repo_id": "/home/robot/code/lerobot_rl/models/sac_gym_hil_pick_lift",
         "normalization_mapping": {
             "VISUAL": "MEAN_STD",
             "STATE": "MIN_MAX",
@@ -178,8 +178,8 @@
             "init_final": 0.05
         },
         "actor_learner_config": {
-            "learner_host": "0.0.0.0",
-            "learner_port": 9001,
+            "learner_host": "172.16.78.10",
+            "learner_port": 32186,
             "policy_parameters_push_frequency": 4
         },
         "concurrency": {
@@ -227,12 +227,12 @@
     },
     "name": "franka_sim",
     "mode": "None",
-    "repo_id": "/liujinxin/zbh/lerobot_rl/dataset/franka_sim_pick_lift_6",
+    "repo_id": "/home/robot/code/lerobot_rl/dataset/franka_sim_pick_lift_6",
     "dataset_root": null,
     "task": "PandaPickCubeKeyboard-v0",
     "num_episodes": 30,
     "episode": 0,
-    "pretrained_policy_name_or_path": "/liujinxin/zbh/lerobot_rl/models/sac_gym_hil_pick_lift",
+    "pretrained_policy_name_or_path": null,
     "device": "cuda",
     "push_to_hub": false,
     "fps": 10,

@@ -271,3 +271,56 @@ class HILEnvConfig(EnvConfig):
             "use_gamepad": self.use_gamepad,
             "gripper_penalty": self.gripper_penalty,
         }
+
+
+@EnvConfig.register_subclass("ur")
+@dataclass
+class HILEnvConfig(EnvConfig):
+    """Configuration for the HIL environment."""
+
+    type: str = "ur"
+    name: str = "PandaPickCube"
+    task: str = "PandaPickCubeKeyboard-v0"
+    use_viewer: bool = True
+    gripper_penalty: float = 0.0
+    use_ur: bool = True
+    state_dim: int = 12
+    action_dim: int = 7
+    fps: int = 100
+    episode_length: int = 100
+    features: dict[str, PolicyFeature] = field(
+        default_factory=lambda: {
+            "action": PolicyFeature(type=FeatureType.ACTION, shape=(4,)),
+            "observation.image": PolicyFeature(type=FeatureType.VISUAL, shape=(3, 128, 128)),
+            "observation.state": PolicyFeature(type=FeatureType.STATE, shape=(18,)),
+        }
+    )
+    features_map: dict[str, str] = field(
+        default_factory=lambda: {
+            "action": ACTION,
+            "observation.image": OBS_IMAGE,
+            "observation.state": OBS_STATE,
+        }
+    )
+    ################# args from hilserlrobotenv
+    reward_classifier_pretrained_path: str | None = None
+    wrapper: EnvTransformConfig | None = None
+    mode: str = None  # Either "record", "replay", None
+    repo_id: str | None = None
+    dataset_root: str | None = None
+    num_episodes: int = 10  # only for record mode
+    episode: int = 0
+    device: str = "cuda"
+    push_to_hub: bool = True
+    pretrained_policy_name_or_path: str | None = None
+    # For the reward classifier, to record more positive examples after a success
+    number_of_steps_after_success: int = 0
+    ############################
+
+    @property
+    def gym_kwargs(self) -> dict:
+        return {
+            "use_viewer": self.use_viewer,
+            "use_ur": self.use_ur,
+            "gripper_penalty": self.gripper_penalty,
+        }
