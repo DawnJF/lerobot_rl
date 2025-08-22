@@ -667,7 +667,7 @@ class ReplayBuffer:
         if not has_done_key:
             print("'next.done' key not found in dataset. Inferring from episode boundaries...")
 
-        for i in tqdm(range(num_frames)):
+        for i in tqdm(range(num_frames), desc="converting..."):
             current_sample = dataset[i]
 
             # ----- 1) Current state -----

@@ -44,6 +44,8 @@ For more details on the complete HILSerl training workflow, see:
 https://github.com/michel-aractingi/lerobot-hilserl-guide
 """
 
+import sys
+sys.path.append("/root/.cache/huggingface/hub/models--helper2424--resnet10/snapshots/e16ff8c2c9fe2130c0e3eabfd142f131e59be97f")
 import logging
 import os
 import shutil
@@ -387,15 +389,18 @@ def add_actor_information_and_train(
             continue
 
         if online_iterator is None:
+            logging.info(f"batch_size_online: {batch_size}")
             online_iterator = replay_buffer.get_iterator(
                 batch_size=batch_size, async_prefetch=async_prefetch, queue_size=2
             )
 
         if offline_replay_buffer is not None and offline_iterator is None:
+            logging.info(f"batch_size_offline: {batch_size}")
             offline_iterator = offline_replay_buffer.get_iterator(
                 batch_size=batch_size, async_prefetch=async_prefetch, queue_size=2
             )
 
+        logging.info("!!!Start Training!!!")
         time_for_one_optimization_step = time.time()
         for _ in range(utd_ratio - 1):
             # Sample from the iterators
@@ -467,6 +472,7 @@ def add_actor_information_and_train(
 
         actions = batch["action"]
         rewards = batch["reward"]
+        logging.info(f"1-rewards: {rewards.shape}")
         observations = batch["state"]
         next_observations = batch["next_state"]
         done = batch["done"]
@@ -488,6 +494,7 @@ def add_actor_information_and_train(
             "next_observation_feature": next_observation_features,
         }
 
+        # Critic optimization (if available)
         critic_output = policy.forward(forward_batch, model="critic")
 
         loss_critic = critic_output["loss_critic"]

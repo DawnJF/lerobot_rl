@@ -26,37 +26,12 @@
             ]
         },
         {
-            "name": "actor",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "lerobot.scripts.rl.actor",
-            "console": "integratedTerminal",
-            "args": [
-                "--config_path",
-                "/home/robot/code/lerobot_rl/src/lerobot/config_files/train_ur_env_actor.json"
-            ]
-        },
-        {
-            "name": "gym_manipulator",
-            "type": "python",
-            "request": "launch",
-            "program": "${workspaceFolder}/src/lerobot/scripts/rl/gym_manipulator.py",
-            "console": "integratedTerminal",
-            "python": "/home/robot/code/lerobot_env/bin/python",
-            "cwd": "${workspaceFolder}/src",
-            "justMyCode": false,
-            "args": [
-                "--config_path",
-                "lerobot/config_files/ur_env.json"
-            ]
-        },
-        {
             "name": "learner",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/src/lerobot/scripts/rl/learner.py",
             "console": "integratedTerminal",
-            "python": "/home/robot/code/lerobot_env/bin/python",
+            "python": "/ssdwork/liujinxin/miniconda3/envs/lerobot_zbh/bin/python",
             "cwd": "${workspaceFolder}/src",
             "justMyCode": false,
             "args": [
