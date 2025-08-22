@@ -245,7 +245,7 @@ class UrRobotEnv(gym.Env):
 
         # TODO make the path become an argument
         # path = "/home/robot/code/UR_Robot_Arm_Show/tele_ws/src/tele_ctrl_jeff/arch"
-        path = "/home/robot/code/debug2_UR_Robot_Arm_Show/workspace/src/robot/src/arch"
+        path = "/home/robot/code/debug_UR_Robot_Arm_Show/workspace/src/robot/src/arch"
         
         target_path = os.path.abspath(
             path
@@ -359,10 +359,12 @@ class UrRobotEnv(gym.Env):
         self.observation_space = gym.spaces.Dict(observation_spaces)
 
         # Define the action space for joint positions along with setting an intervention flag.
-        action_dim = 7
+        action_dim = 3
         bounds = {}
-        bounds["min"] = np.array([-0.6040189744679158, -0.6372649276666528, 0.09119244420442366, 0.23128056, 0.81082114, -0.19445738, -0.19476598])
-        bounds["max"] = np.array([-0.3742814180879835, -0.14131461035390744, 0.17701562582993277, 0.58509052, 0.97288253, 0.1949256, 0.1946087])
+        # bounds["min"] = np.array([-0.6040189744679158, -0.6372649276666528, 0.09119244420442366, 0.23128056, 0.81082114, -0.19445738, -0.19476598])
+        # bounds["max"] = np.array([-0.3742814180879835, -0.14131461035390744, 0.17701562582993277, 0.58509052, 0.97288253, 0.1949256, 0.1946087])
+        bounds["min"] = np.array([-0.6040189744679158, -0.6372649276666528, 0.09119244420442366])
+        bounds["max"] = np.array([-0.3742814180879835, -0.14131461035390744, 0.17701562582993277])
 
         if self.use_gripper:
             action_dim += 1
@@ -442,7 +444,7 @@ class UrRobotEnv(gym.Env):
                 gripper: 1.0/0.0
 
         """
-        assert len(action) == 8, "The action should be [x, y, z, w, xi, yj, zk, gripper]."
+        assert len(action) == 4, "The action should be [x, y, z, gripper]."
         response = self.UrRobot.step(action)
         info = self._process_info(response)
         self._process_observation(response)
